@@ -165,6 +165,8 @@ jobs:
       - name: Deploy to Amazon EKS
         run: |
           kubectl apply -f kubernetes/
+          kubectl rollout restart deployment maintenance-backend
+          kubectl rollout restart deployment maintenance-frontend
 
       # ----------------------------------------------------
       # Verify Deployment
