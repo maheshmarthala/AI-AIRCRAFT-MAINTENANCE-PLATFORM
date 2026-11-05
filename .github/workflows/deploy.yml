@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
 
@@ -12,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       BACKEND_IMAGE: ${{ secrets.BACKEND_IMAGE }}
       FRONTEND_IMAGE: ${{ secrets.FRONTEND_IMAGE }}
@@ -28,6 +29,26 @@ jobs:
         uses: actions/checkout@v4
 
       # ----------------------------------------------------
+      # Validate Required Secrets
+      # ----------------------------------------------------
+
+      - name: Validate Secrets
+        run: |
+          missing_secrets=()
+          [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && missing_secrets+=("AWS_ACCESS_KEY_ID")
+          [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && missing_secrets+=("AWS_SECRET_ACCESS_KEY")
+          [ -z "${{ secrets.AWS_ACCOUNT_ID }}" ] && missing_secrets+=("AWS_ACCOUNT_ID")
+          [ -z "${{ secrets.EKS_CLUSTER_NAME }}" ] && missing_secrets+=("EKS_CLUSTER_NAME")
+          [ -z "${{ secrets.BACKEND_IMAGE }}" ] && missing_secrets+=("BACKEND_IMAGE")
+          [ -z "${{ secrets.FRONTEND_IMAGE }}" ] && missing_secrets+=("FRONTEND_IMAGE")
+
+          if [ ${#missing_secrets[@]} -ne 0 ]; then
+            echo "::error::Missing required repository secret(s): ${missing_secrets[*]}"
+            echo "Please go to Settings > Secrets and variables > Actions in your GitHub repository and add them."
+            exit 1
+          fi
+
+      # ----------------------------------------------------
       # Configure AWS Credentials
       # ----------------------------------------------------
 
@@ -37,7 +58,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
       # ----------------------------------------------------
       # Login to Amazon ECR
